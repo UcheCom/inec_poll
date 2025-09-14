@@ -6,19 +6,48 @@ import { ElectionType } from '../src/types/poll'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../src/context/AuthContext'
 
+/**
+ * Interface for individual poll option data
+ * 
+ * @interface PollOption
+ */
 interface PollOption {
     candidate_name: string
     party_name: string
     candidate_image_url: string
 }
 
+/**
+ * CreatePollForm Component
+ * 
+ * Provides a comprehensive form interface for creating new polls.
+ * Handles all aspects of poll creation including:
+ * - Poll metadata (title, description, election type)
+ * - Geographic scope (state, LGA for local elections)
+ * - Candidate options with party affiliations and images
+ * - Form validation and error handling
+ * - Dynamic option management (add/remove candidates)
+ * 
+ * Features:
+ * - Dynamic form fields based on election type
+ * - Real-time form validation
+ * - Loading states during submission
+ * - Success/error feedback
+ * - Automatic navigation after successful creation
+ * 
+ * @returns JSX element containing the poll creation form
+ */
 export default function CreatePollForm() {
+    // Navigation and authentication
     const router = useRouter()
     const { user } = useAuth()
+
+    // Form state management
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
 
+    // Form data state with default values
     const [formData, setFormData] = useState<CreatePollData>({
         title: '',
         description: '',
@@ -32,6 +61,7 @@ export default function CreatePollForm() {
         ]
     })
 
+    // Available election types for the dropdown
     const electionTypes: ElectionType[] = [
         'Presidential',
         'Gubernatorial',
@@ -40,6 +70,7 @@ export default function CreatePollForm() {
         'State Assembly'
     ]
 
+    // Complete list of Nigerian states for state-specific elections
     const nigerianStates = [
         'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa',
         'Benue', 'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo',
@@ -49,6 +80,12 @@ export default function CreatePollForm() {
         'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
     ]
 
+    /**
+     * Handles changes to main poll form fields
+     * 
+     * @param field - The form field being updated
+     * @param value - The new value for the field
+     */
     const handleInputChange = (field: keyof CreatePollData, value: string) => {
         setFormData(prev => ({
             ...prev,
@@ -56,6 +93,13 @@ export default function CreatePollForm() {
         }))
     }
 
+    /**
+     * Handles changes to individual candidate option fields
+     * 
+     * @param index - Index of the option being updated
+     * @param field - The option field being updated
+     * @param value - The new value for the field
+     */
     const handleOptionChange = (index: number, field: keyof PollOption, value: string) => {
         setFormData(prev => ({
             ...prev,
@@ -65,6 +109,10 @@ export default function CreatePollForm() {
         }))
     }
 
+    /**
+     * Adds a new candidate option to the poll
+     * Allows users to create polls with more than 2 candidates
+     */
     const addOption = () => {
         setFormData(prev => ({
             ...prev,
@@ -72,6 +120,12 @@ export default function CreatePollForm() {
         }))
     }
 
+    /**
+     * Removes a candidate option from the poll
+     * Prevents removal if only 2 options remain (minimum required)
+     * 
+     * @param index - Index of the option to remove
+     */
     const removeOption = (index: number) => {
         if (formData.options.length > 2) {
             setFormData(prev => ({
@@ -81,25 +135,38 @@ export default function CreatePollForm() {
         }
     }
 
+    /**
+     * Handles form submission for poll creation
+     * 
+     * Performs comprehensive validation before submitting:
+     * - User authentication check
+     * - Required field validation
+     * - Minimum candidate count validation
+     * - Server-side poll creation
+     * - Success/error handling with user feedback
+     * 
+     * @param e - React form event
+     */
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
         setError(null)
 
-        // Check if user is authenticated
+        // Ensure user is authenticated before creating poll
         if (!user) {
             setError('You must be logged in to create polls')
             setIsSubmitting(false)
             return
         }
 
-        // Validate form
+        // Validate required fields
         if (!formData.title.trim()) {
             setError('Poll title is required')
             setIsSubmitting(false)
             return
         }
 
+        // Filter out empty options and validate minimum count
         const validOptions = formData.options.filter(option => option.candidate_name.trim())
         if (validOptions.length < 2) {
             setError('At least 2 candidates are required')
@@ -107,18 +174,20 @@ export default function CreatePollForm() {
             return
         }
 
+        // Prepare data for submission (only include valid options)
         const submitData = {
             ...formData,
             options: validOptions
         }
 
+        // Submit poll creation to server action
         const result = await createPoll(submitData, user.id)
 
         if (result.success) {
-            // Show success message
+            // Show success feedback and redirect
             setError(null)
             setSuccess(true)
-            // Redirect after a short delay to show the success message
+            // Brief delay to show success message before redirect
             setTimeout(() => {
                 router.push('/polls')
             }, 2000)

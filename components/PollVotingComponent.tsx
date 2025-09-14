@@ -5,7 +5,13 @@ import { voteOnPoll } from '../lib/actions/polls'
 import { Poll, OptionVoteCount } from '../src/types/poll'
 import { useAuth } from '../src/context/AuthContext'
 
+/**
+ * Props interface for PollVotingComponent
+ * 
+ * @interface PollVotingComponentProps
+ */
 interface PollVotingComponentProps {
+    /** Poll data with options for voting */
     poll: Poll & {
         poll_options: Array<{
             id: string
@@ -15,24 +21,58 @@ interface PollVotingComponentProps {
             display_order: number
         }>
     }
+    /** Vote count results for each option */
     results: OptionVoteCount[]
+    /** Unique identifier of the poll */
     pollId: string
 }
 
+/**
+ * PollVotingComponent
+ * 
+ * Handles the complete voting interface for polls including:
+ * - Candidate selection interface
+ * - Vote submission with validation
+ * - Real-time results display
+ * - Poll status checking (active/expired)
+ * - Duplicate vote prevention
+ * 
+ * Features:
+ * - Interactive candidate selection with visual feedback
+ * - Loading states during vote submission
+ * - Error handling for voting failures
+ * - Results visualization with percentages and vote counts
+ * - Automatic poll status validation
+ * 
+ * @param props - Component props containing poll data and results
+ * @returns JSX element with voting interface or results display
+ */
 export default function PollVotingComponent({ poll, results, pollId }: PollVotingComponentProps) {
+    // Authentication context for user validation
     const { user } = useAuth()
+
+    // Voting state management
     const [selectedOption, setSelectedOption] = useState<string | null>(null)
     const [isVoting, setIsVoting] = useState(false)
     const [hasVoted, setHasVoted] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [showResults, setShowResults] = useState(false)
 
+    // Calculate total votes and poll status
     const totalVotes = results.reduce((sum, result) => sum + result.vote_count, 0)
     const isPollActive = poll.is_active && (!poll.end_date || new Date(poll.end_date) > new Date())
 
+    /**
+     * Handles vote submission process
+     * 
+     * Validates user authentication and selected option before submitting vote.
+     * Updates UI state based on vote success/failure and refreshes page
+     * to show updated results.
+     */
     const handleVote = async () => {
         if (!selectedOption) return
 
+        // Ensure user is authenticated before allowing vote
         if (!user) {
             setError('You must be logged in to vote')
             return
@@ -41,12 +81,14 @@ export default function PollVotingComponent({ poll, results, pollId }: PollVotin
         setIsVoting(true)
         setError(null)
 
+        // Submit vote to server action
         const result = await voteOnPoll(pollId, selectedOption, user.id)
 
         if (result.success) {
             setHasVoted(true)
             setShowResults(true)
-            // Refresh the page to show updated results
+            // Refresh page to show updated results immediately
+            // This ensures real-time vote count updates
             window.location.reload()
         } else {
             setError(result.error || 'Failed to vote')
@@ -55,11 +97,23 @@ export default function PollVotingComponent({ poll, results, pollId }: PollVotin
         setIsVoting(false)
     }
 
+    /**
+     * Calculates vote percentage for a specific option
+     * 
+     * @param optionId - ID of the poll option
+     * @returns Percentage of votes for the option (0-100)
+     */
     const getVotePercentage = (optionId: string) => {
         const result = results.find(r => r.option_id === optionId)
         return result ? result.vote_percentage : 0
     }
 
+    /**
+     * Gets vote count for a specific option
+     * 
+     * @param optionId - ID of the poll option
+     * @returns Number of votes for the option
+     */
     const getVoteCount = (optionId: string) => {
         const result = results.find(r => r.option_id === optionId)
         return result ? result.vote_count : 0

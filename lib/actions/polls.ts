@@ -5,47 +5,86 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { Poll, PollOption, ElectionType } from '../../src/types/poll'
 
+/**
+ * CreatePollData Interface
+ * 
+ * Defines the structure for poll creation data.
+ * Used for both creating new polls and updating existing ones.
+ * 
+ * @interface CreatePollData
+ */
 export interface CreatePollData {
+    /** Title of the poll - required for identification */
     title: string
+    /** Optional description providing context about the poll */
     description?: string
+    /** Type of election (Presidential, Gubernatorial, etc.) */
     election_type: ElectionType
+    /** State for state-specific elections (optional for Presidential) */
     state?: string
+    /** Local Government Area for local elections */
     lga?: string
+    /** Optional end date for the poll */
     end_date?: string
+    /** Array of candidate options for the poll */
     options: {
+        /** Name of the candidate - required */
         candidate_name: string
+        /** Political party affiliation - optional */
         party_name?: string
+        /** URL to candidate's image - optional */
         candidate_image_url?: string
     }[]
 }
 
+/**
+ * Creates a new poll with the provided data
+ * 
+ * This server action handles the complete poll creation process including:
+ * - User authentication validation
+ * - User profile creation if needed
+ * - Poll record creation
+ * - Poll options creation
+ * - Transaction rollback on failure
+ * 
+ * @param data - Poll creation data including title, description, election type, and options
+ * @param userId - ID of the user creating the poll
+ * @returns Promise with success status and poll ID or error message
+ * 
+ * @throws Error if user is not authenticated
+ * @throws Error if poll creation fails
+ * @throws Error if poll options creation fails (with automatic cleanup)
+ */
 export async function createPoll(data: CreatePollData, userId: string) {
     try {
         const supabase = createServerClient()
 
-        // Validate user ID
+        // Validate user authentication - required for poll creation
         if (!userId) {
             throw new Error('Authentication required to create polls')
         }
 
-        // First, ensure the user has a profile
+        // Ensure user profile exists before creating poll
+        // This handles cases where user was created through auth but profile wasn't set up
         const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id')
             .eq('id', userId)
             .single()
 
+        // Handle profile lookup errors (except "not found" which is expected)
         if (profileError && profileError.code !== 'PGRST116') {
             throw new Error('Failed to verify user profile')
         }
 
-        // Create profile if it doesn't exist
+        // Create user profile if it doesn't exist
+        // This ensures referential integrity for the poll's creator_id
         if (!profile) {
             const { error: createProfileError } = await supabase
                 .from('profiles')
                 .insert({
                     id: userId,
-                    email: '', // We'll need to get this from the client
+                    email: '', // Will be updated when user completes profile
                     full_name: null,
                     avatar_url: null
                 })
@@ -55,7 +94,7 @@ export async function createPoll(data: CreatePollData, userId: string) {
             }
         }
 
-        // Create the poll
+        // Create the main poll record
         const { data: poll, error: pollError } = await supabase
             .from('polls')
             .insert({
@@ -74,14 +113,14 @@ export async function createPoll(data: CreatePollData, userId: string) {
             throw new Error(`Failed to create poll: ${pollError.message}`)
         }
 
-        // Create poll options
+        // Create poll options (candidates) for the poll
         if (data.options && data.options.length > 0) {
             const optionsData = data.options.map((option, index) => ({
                 poll_id: poll.id,
                 candidate_name: option.candidate_name,
                 party_name: option.party_name,
                 candidate_image_url: option.candidate_image_url,
-                display_order: index + 1
+                display_order: index + 1 // Maintains order of candidates as entered
             }))
 
             const { error: optionsError } = await supabase
@@ -89,12 +128,14 @@ export async function createPoll(data: CreatePollData, userId: string) {
                 .insert(optionsData)
 
             if (optionsError) {
-                // If options creation fails, clean up the poll
+                // Transaction rollback: delete the poll if options creation fails
+                // This maintains data consistency
                 await supabase.from('polls').delete().eq('id', poll.id)
                 throw new Error(`Failed to create poll options: ${optionsError.message}`)
             }
         }
 
+        // Revalidate the polls page to show the new poll
         revalidatePath('/polls')
         return { success: true, poll_id: poll.id }
     } catch (error) {
@@ -106,10 +147,25 @@ export async function createPoll(data: CreatePollData, userId: string) {
     }
 }
 
+/**
+ * Retrieves all active polls with their options and creator information
+ * 
+ * Fetches polls from the database with related data including:
+ * - Poll options (candidates) with display order
+ * - Creator profile information
+ * - Only active polls are returned
+ * - Results are ordered by creation date (newest first)
+ * 
+ * @returns Promise with success status and polls array or error message
+ * 
+ * @throws Error if database query fails
+ * @throws Error if environment variables are not configured
+ */
 export async function getPolls() {
     try {
         const supabase = createServerClient()
 
+        // Fetch polls with related data using Supabase's relational queries
         const { data: polls, error } = await supabase
             .from('polls')
             .select(`
@@ -127,8 +183,8 @@ export async function getPolls() {
           full_name
         )
       `)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false })
+            .eq('is_active', true) // Only fetch active polls
+            .order('created_at', { ascending: false }) // Newest polls first
 
         if (error) {
             throw new Error(`Failed to fetch polls: ${error.message}`)
@@ -138,7 +194,7 @@ export async function getPolls() {
     } catch (error) {
         console.error('Error fetching polls:', error)
 
-        // If it's an environment variable error, provide helpful guidance
+        // Provide helpful error message for common configuration issues
         if (error instanceof Error && error.message.includes('Missing Supabase environment variables')) {
             return {
                 success: false,
@@ -153,10 +209,25 @@ export async function getPolls() {
     }
 }
 
+/**
+ * Retrieves a specific poll by its ID with all related options
+ * 
+ * Fetches a single poll from the database including:
+ * - All poll details (title, description, election type, etc.)
+ * - Poll options (candidates) with display order
+ * - Used for poll detail pages and voting interfaces
+ * 
+ * @param id - Unique identifier of the poll to fetch
+ * @returns Promise with success status and poll data or error message
+ * 
+ * @throws Error if poll is not found
+ * @throws Error if database query fails
+ */
 export async function getPollById(id: string) {
     try {
         const supabase = createServerClient()
 
+        // Fetch single poll with its options using relational query
         const { data: poll, error } = await supabase
             .from('polls')
             .select(`
@@ -170,7 +241,7 @@ export async function getPollById(id: string) {
         )
       `)
             .eq('id', id)
-            .single()
+            .single() // Expect exactly one result
 
         if (error) {
             throw new Error(`Failed to fetch poll: ${error.message}`)
@@ -186,16 +257,38 @@ export async function getPollById(id: string) {
     }
 }
 
+/**
+ * Records a user's vote for a specific poll option
+ * 
+ * This function handles the complete voting process including:
+ * - User authentication validation
+ * - Poll availability checks (active status and end date)
+ * - Duplicate vote prevention
+ * - Vote recording with referential integrity
+ * - Cache invalidation for real-time results
+ * 
+ * @param pollId - ID of the poll being voted on
+ * @param optionId - ID of the selected poll option (candidate)
+ * @param userId - ID of the user casting the vote
+ * @returns Promise with success status or error message
+ * 
+ * @throws Error if user is not authenticated
+ * @throws Error if poll is not found or inactive
+ * @throws Error if poll has ended
+ * @throws Error if user has already voted
+ * @throws Error if vote recording fails
+ */
 export async function voteOnPoll(pollId: string, optionId: string, userId: string) {
     try {
         const supabase = createServerClient()
 
-        // Validate user ID
+        // Validate user authentication - required for voting
         if (!userId) {
             throw new Error('Authentication required to vote')
         }
 
-        // Check if poll is active
+        // Check poll status before allowing vote
+        // This prevents voting on inactive or expired polls
         const { data: poll, error: pollError } = await supabase
             .from('polls')
             .select('is_active, end_date')
@@ -206,15 +299,17 @@ export async function voteOnPoll(pollId: string, optionId: string, userId: strin
             throw new Error('Poll not found')
         }
 
+        // Ensure poll is still active
         if (!poll.is_active) {
             throw new Error('This poll is no longer active')
         }
 
+        // Check if poll has passed its end date
         if (poll.end_date && new Date(poll.end_date) < new Date()) {
             throw new Error('This poll has ended')
         }
 
-        // Check if user has already voted
+        // Prevent duplicate voting - each user can only vote once per poll
         const { data: existingVote } = await supabase
             .from('votes')
             .select('id')
@@ -226,7 +321,7 @@ export async function voteOnPoll(pollId: string, optionId: string, userId: strin
             throw new Error('You have already voted on this poll')
         }
 
-        // Cast the vote
+        // Record the vote in the database
         const { error: voteError } = await supabase
             .from('votes')
             .insert({
@@ -239,6 +334,7 @@ export async function voteOnPoll(pollId: string, optionId: string, userId: strin
             throw new Error(`Failed to cast vote: ${voteError.message}`)
         }
 
+        // Invalidate cache to show updated results immediately
         revalidatePath(`/polls/${pollId}`)
         return { success: true }
     } catch (error) {

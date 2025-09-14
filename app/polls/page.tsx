@@ -3,9 +3,28 @@ import { getPolls } from '../../lib/actions/polls'
 import PollCard from '../../components/PollCard'
 import ProtectedPollsPage from '../../components/ProtectedPollsPage'
 
+/**
+ * PollsPage Component
+ * 
+ * Main dashboard page displaying all available polls to authenticated users.
+ * This is a Server Component that fetches poll data on the server side
+ * for optimal performance and SEO.
+ * 
+ * Features:
+ * - Server-side data fetching for polls
+ * - Authentication protection via ProtectedPollsPage wrapper
+ * - Responsive grid layout for poll cards
+ * - Empty state with call-to-action for new users
+ * - Error handling for data fetching failures
+ * - Navigation to poll creation page
+ * 
+ * @returns JSX element containing the polls dashboard
+ */
 export default async function PollsPage() {
+  // Fetch polls data on the server side
   const result = await getPolls()
 
+  // Handle data fetching errors with user-friendly message
   if (!result.success) {
     return (
       <div className="container mx-auto p-4">
@@ -16,11 +35,13 @@ export default async function PollsPage() {
     )
   }
 
+  // Extract polls array with fallback to empty array
   const polls = result.polls || []
 
   return (
     <ProtectedPollsPage>
       <div className="container mx-auto p-4">
+        {/* Page header with title and create poll button */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">INEC Nigeria Polls</h1>
           <Link
@@ -31,7 +52,9 @@ export default async function PollsPage() {
           </Link>
         </div>
 
+        {/* Conditional rendering based on polls availability */}
         {polls.length === 0 ? (
+          // Empty state for when no polls exist
           <div className="text-center py-12">
             <h2 className="text-xl font-semibold text-gray-600 mb-4">No polls available</h2>
             <p className="text-gray-500 mb-6">Be the first to create a poll!</p>
@@ -43,6 +66,7 @@ export default async function PollsPage() {
             </Link>
           </div>
         ) : (
+          // Grid layout for poll cards
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {polls.map((poll) => (
               <PollCard key={poll.id} poll={poll} />
