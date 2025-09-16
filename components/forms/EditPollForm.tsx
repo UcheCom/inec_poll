@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { updatePoll, getPollById, CreatePollData } from '../lib/actions/polls'
-import { ElectionType } from '../src/types/poll'
+import { updatePoll, getPollById, CreatePollData } from '../../lib/actions/polls'
+import { ElectionType } from '../../src/types/poll'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '../src/context/AuthContext'
+import { useAuth } from '../../src/context/AuthContext'
 
 interface PollOption {
     candidate_name: string
@@ -62,7 +62,7 @@ export default function EditPollForm({ pollId, initialData }: EditPollFormProps)
                         state: poll.state || '',
                         lga: poll.lga || '',
                         end_date: poll.end_date ? new Date(poll.end_date).toISOString().slice(0, 16) : '',
-                        options: poll.poll_options?.map(option => ({
+                        options: poll.poll_options?.map((option: any) => ({
                             candidate_name: option.candidate_name,
                             party_name: option.party_name || '',
                             candidate_image_url: option.candidate_image_url || ''
@@ -78,7 +78,10 @@ export default function EditPollForm({ pollId, initialData }: EditPollFormProps)
             }
             loadPoll()
         } else if (initialData) {
-            setFormData(initialData)
+            setFormData({
+                ...initialData,
+                election_type: initialData.election_type as ElectionType
+            })
         }
     }, [pollId, initialData])
 

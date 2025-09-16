@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { voteOnPoll } from '../lib/actions/polls'
-import { Poll, OptionVoteCount } from '../src/types/poll'
-import { useAuth } from '../src/context/AuthContext'
+import { voteOnPoll } from '../../lib/actions/polls'
+import { Poll, OptionVoteCount } from '../../src/types/poll'
+import { useAuth } from '../../src/context/AuthContext'
 
 /**
  * Props interface for PollVotingComponent

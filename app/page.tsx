@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getPolls } from '../lib/actions/polls'
-import PollCard from '../components/PollCard'
+import PollCard from '../components/polls/PollCard'
 
 export default async function Home() {
   const result = await getPolls()

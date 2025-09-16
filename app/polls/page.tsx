@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getPolls } from '../../lib/actions/polls'
-import PollCard from '../../components/PollCard'
-import ProtectedPollsPage from '../../components/ProtectedPollsPage'
+import PollCard from '../../components/polls/PollCard'
+import ProtectedPollsPage from '../../components/polls/ProtectedPollsPage'
 
 /**
  * PollsPage Component

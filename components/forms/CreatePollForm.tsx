@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { createPoll, CreatePollData } from '../lib/actions/polls'
-import { ElectionType } from '../src/types/poll'
+import { createPoll, CreatePollData } from '../../lib/actions/polls'
+import { ElectionType } from '../../src/types/poll'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '../src/context/AuthContext'
+import { useAuth } from '../../src/context/AuthContext'
 
 /**
  * Interface for individual poll option data

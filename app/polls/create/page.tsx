@@ -1,5 +1,5 @@
 'use client'
-import CreatePollForm from '../../../components/CreatePollForm'
+import CreatePollForm from '../../../components/forms/CreatePollForm'
 import { useAuth } from '../../../src/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'

@@ -1,5 +1,5 @@
 'use client'
-import EditPollForm from '../../../../components/EditPollForm'
+import EditPollForm from '../../../../components/forms/EditPollForm'
 import { useAuth } from '../../../../src/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'

@@ -1,5 +1,5 @@
 import { getPollById, getPollResults } from '../../../lib/actions/polls'
-import PollVotingComponent from '../../../components/PollVotingComponent'
+import PollVotingComponent from '../../../components/polls/PollVotingComponent'
 import Link from 'next/link'
 
 /**
