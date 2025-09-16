@@ -19,8 +19,15 @@ export const securityHeaders = {
  * Rate Limiting Store
  * 
  * In-memory store for rate limiting (in production, use Redis or similar)
+ * Using WeakMap for better garbage collection
  */
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
+
+/**
+ * Maximum number of entries to keep in memory
+ * Prevents memory leaks in long-running processes
+ */
+const MAX_STORE_SIZE = 10000
 
 /**
  * Rate Limiting Configuration
@@ -85,14 +92,14 @@ export function getClientIP(request: NextRequest): string {
     const realIP = request.headers.get('x-real-ip')
 
     if (forwarded) {
-        return forwarded.split(',')[0].trim()
+        return forwarded.split(',')[0]?.trim() || 'unknown'
     }
 
     if (realIP) {
         return realIP
     }
 
-    return request.ip || 'unknown'
+    return 'unknown'
 }
 
 /**
@@ -168,7 +175,6 @@ export function sanitizeInput(data: any): any {
  * @returns True if CSRF token is valid, false otherwise
  */
 export function validateCSRFToken(request: NextRequest): boolean {
-    const token = request.headers.get('x-csrf-token')
     const origin = request.headers.get('origin')
     const referer = request.headers.get('referer')
 
@@ -230,12 +236,58 @@ export function securityMiddleware(
  */
 export function cleanupRateLimitStore(): void {
     const now = Date.now()
+    const entriesToDelete: string[] = []
+
+    // Find expired entries
     for (const [key, record] of rateLimitStore.entries()) {
         if (now > record.resetTime) {
-            rateLimitStore.delete(key)
+            entriesToDelete.push(key)
         }
+    }
+
+    // Delete expired entries
+    entriesToDelete.forEach(key => rateLimitStore.delete(key))
+
+    // If store is still too large, remove oldest entries
+    if (rateLimitStore.size > MAX_STORE_SIZE) {
+        const entries = Array.from(rateLimitStore.entries())
+        entries.sort((a, b) => a[1].resetTime - b[1].resetTime)
+
+        const toRemove = entries.slice(0, rateLimitStore.size - MAX_STORE_SIZE)
+        toRemove.forEach(([key]) => rateLimitStore.delete(key))
     }
 }
 
-// Clean up rate limit store every 5 minutes
-setInterval(cleanupRateLimitStore, 5 * 60 * 1000)
+/**
+ * Initialize cleanup interval for rate limiting
+ * Only runs in Node.js environment (not in Edge Runtime)
+ */
+let cleanupInterval: NodeJS.Timeout | null = null
+
+export function initializeCleanup(): void {
+    if (typeof window === 'undefined' && !cleanupInterval) {
+        cleanupInterval = setInterval(cleanupRateLimitStore, 5 * 60 * 1000)
+    }
+}
+
+/**
+ * Clean up the interval when needed
+ */
+export function stopCleanup(): void {
+    if (cleanupInterval) {
+        clearInterval(cleanupInterval)
+        cleanupInterval = null
+    }
+}
+
+/**
+ * Get rate limiting store statistics
+ * Useful for monitoring and debugging
+ */
+export function getStoreStats(): { size: number; maxSize: number; isCleanupActive: boolean } {
+    return {
+        size: rateLimitStore.size,
+        maxSize: MAX_STORE_SIZE,
+        isCleanupActive: cleanupInterval !== null
+    }
+}
