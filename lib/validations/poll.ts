@@ -1,17 +1,12 @@
 import { z } from 'zod'
+import { ELECTION_TYPES, NIGERIAN_STATES, POLL_CONFIG, VALIDATION_RULES } from '../constants'
 
 /**
  * Election Type Schema
  * 
  * Validates election type values against allowed options
  */
-export const electionTypeSchema = z.enum([
-    'Presidential',
-    'Gubernatorial',
-    'Senatorial',
-    'House of Reps',
-    'State Assembly'
-])
+export const electionTypeSchema = z.enum(ELECTION_TYPES)
 
 /**
  * Poll Option Schema
@@ -21,10 +16,10 @@ export const electionTypeSchema = z.enum([
 export const pollOptionSchema = z.object({
     candidate_name: z.string()
         .min(1, 'Candidate name is required')
-        .max(255, 'Candidate name must be less than 255 characters')
+        .max(POLL_CONFIG.MAX_CANDIDATE_NAME_LENGTH, `Candidate name must be less than ${POLL_CONFIG.MAX_CANDIDATE_NAME_LENGTH} characters`)
         .trim(),
     party_name: z.string()
-        .max(100, 'Party name must be less than 100 characters')
+        .max(POLL_CONFIG.MAX_PARTY_NAME_LENGTH, `Party name must be less than ${POLL_CONFIG.MAX_PARTY_NAME_LENGTH} characters`)
         .trim()
         .optional(),
     candidate_image_url: z.string()
@@ -41,19 +36,19 @@ export const pollOptionSchema = z.object({
 export const createPollSchema = z.object({
     title: z.string()
         .min(1, 'Poll title is required')
-        .max(500, 'Poll title must be less than 500 characters')
+        .max(POLL_CONFIG.MAX_TITLE_LENGTH, `Poll title must be less than ${POLL_CONFIG.MAX_TITLE_LENGTH} characters`)
         .trim(),
     description: z.string()
-        .max(2000, 'Description must be less than 2000 characters')
+        .max(POLL_CONFIG.MAX_DESCRIPTION_LENGTH, `Description must be less than ${POLL_CONFIG.MAX_DESCRIPTION_LENGTH} characters`)
         .trim()
         .optional(),
     election_type: electionTypeSchema,
     state: z.string()
-        .max(100, 'State name must be less than 100 characters')
+        .max(POLL_CONFIG.MAX_STATE_LENGTH, `State name must be less than ${POLL_CONFIG.MAX_STATE_LENGTH} characters`)
         .trim()
         .optional(),
     lga: z.string()
-        .max(100, 'LGA name must be less than 100 characters')
+        .max(POLL_CONFIG.MAX_LGA_LENGTH, `LGA name must be less than ${POLL_CONFIG.MAX_LGA_LENGTH} characters`)
         .trim()
         .optional(),
     end_date: z.string()
@@ -61,8 +56,8 @@ export const createPollSchema = z.object({
         .optional()
         .or(z.literal('')),
     options: z.array(pollOptionSchema)
-        .min(2, 'At least 2 candidates are required')
-        .max(10, 'Maximum 10 candidates allowed')
+        .min(POLL_CONFIG.MIN_CANDIDATES, `At least ${POLL_CONFIG.MIN_CANDIDATES} candidates are required`)
+        .max(POLL_CONFIG.MAX_CANDIDATES, `Maximum ${POLL_CONFIG.MAX_CANDIDATES} candidates allowed`)
 })
 
 /**
@@ -72,8 +67,8 @@ export const createPollSchema = z.object({
  */
 export const updatePollSchema = createPollSchema.partial().extend({
     options: z.array(pollOptionSchema)
-        .min(2, 'At least 2 candidates are required')
-        .max(10, 'Maximum 10 candidates allowed')
+        .min(POLL_CONFIG.MIN_CANDIDATES, `At least ${POLL_CONFIG.MIN_CANDIDATES} candidates are required`)
+        .max(POLL_CONFIG.MAX_CANDIDATES, `Maximum ${POLL_CONFIG.MAX_CANDIDATES} candidates allowed`)
         .optional()
 })
 
@@ -83,8 +78,8 @@ export const updatePollSchema = createPollSchema.partial().extend({
  * Validates vote submission data
  */
 export const voteSchema = z.object({
-    poll_id: z.string().uuid('Invalid poll ID'),
-    option_id: z.string().uuid('Invalid option ID')
+    poll_id: z.string().regex(VALIDATION_RULES.UUID_REGEX, 'Invalid poll ID'),
+    option_id: z.string().regex(VALIDATION_RULES.UUID_REGEX, 'Invalid option ID')
 })
 
 /**
@@ -95,17 +90,17 @@ export const voteSchema = z.object({
 export const userProfileSchema = z.object({
     full_name: z.string()
         .min(1, 'Full name is required')
-        .max(255, 'Full name must be less than 255 characters')
+        .max(POLL_CONFIG.MAX_CANDIDATE_NAME_LENGTH, `Full name must be less than ${POLL_CONFIG.MAX_CANDIDATE_NAME_LENGTH} characters`)
         .trim(),
     email: z.string()
         .email('Must be a valid email address')
-        .max(255, 'Email must be less than 255 characters'),
+        .max(POLL_CONFIG.MAX_CANDIDATE_NAME_LENGTH, `Email must be less than ${POLL_CONFIG.MAX_CANDIDATE_NAME_LENGTH} characters`),
     state: z.string()
-        .max(100, 'State name must be less than 100 characters')
+        .max(POLL_CONFIG.MAX_STATE_LENGTH, `State name must be less than ${POLL_CONFIG.MAX_STATE_LENGTH} characters`)
         .trim()
         .optional(),
     lga: z.string()
-        .max(100, 'LGA name must be less than 100 characters')
+        .max(POLL_CONFIG.MAX_LGA_LENGTH, `LGA name must be less than ${POLL_CONFIG.MAX_LGA_LENGTH} characters`)
         .trim()
         .optional(),
     avatar_url: z.string()
@@ -204,13 +199,5 @@ export function sanitizeInput(input: string): string {
  * @returns True if valid Nigerian state, false otherwise
  */
 export function isValidNigerianState(state: string): boolean {
-    const nigerianStates = [
-        'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa',
-        'Benue', 'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo',
-        'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo', 'Jigawa',
-        'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara',
-        'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun',
-        'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
-    ]
-    return nigerianStates.includes(state)
+    return NIGERIAN_STATES.includes(state as any)
 }

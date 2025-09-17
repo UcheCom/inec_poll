@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { deletePoll } from '../../lib/actions/polls'
-import { useAuth } from '../../src/context/AuthContext'
+import { useAuth } from '../../lib/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert'
 import { LoadingButton } from '../ui/loading'
 import { ErrorBoundary } from '../ui/error-boundary'
+import { QRCodeButton } from '../ui/qr-code'
 import { formatDate, truncateText } from '../../lib/utils'
 
 interface PollCardProps {
@@ -170,11 +171,17 @@ export default function PollCard({ poll }: PollCardProps) {
                     <span className="text-sm text-muted-foreground">
                         Created: {formatDate(poll.created_at)}
                     </span>
-                    <Button asChild>
-                        <Link href={`/polls/${poll.id}`}>
-                            View Poll
-                        </Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <QRCodeButton
+                            url={`${typeof window !== 'undefined' ? window.location.origin : ''}/polls/${poll.id}`}
+                            pollTitle={poll.title}
+                        />
+                        <Button asChild>
+                            <Link href={`/polls/${poll.id}`}>
+                                View Poll
+                            </Link>
+                        </Button>
+                    </div>
                 </CardFooter>
 
                 {/* Error Display */}

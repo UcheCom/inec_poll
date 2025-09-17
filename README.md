@@ -11,6 +11,34 @@ This application allows users to:
 - **Manage Elections**: Support for different election types and geographic scopes
 - **Share Polls**: Unique URLs and QR codes for easy poll sharing
 
+## ✨ Recent Improvements
+
+The codebase has been refactored to follow modern best practices:
+
+### 🏗️ Architecture Improvements
+- **Consolidated Structure**: Removed duplicate `/src` directory and organized all code under `/lib`
+- **Server Actions**: Replaced API routes with Next.js Server Actions for better performance
+- **Type Safety**: Centralized all TypeScript types in `/lib/types`
+- **Constants Management**: Created centralized configuration in `/lib/constants`
+
+### 🔒 Security Enhancements
+- **Rate Limiting**: Implemented comprehensive rate limiting for all operations
+- **Input Validation**: Enhanced Zod schemas with centralized validation rules
+- **Security Headers**: Applied security headers via middleware
+- **Error Boundaries**: Improved error handling with better user feedback
+
+### 🎨 UI/UX Improvements
+- **QR Code Sharing**: Added QR code generation for easy poll sharing
+- **Loading States**: Enhanced loading indicators throughout the app
+- **Error Handling**: Better error messages and recovery options
+- **Responsive Design**: Improved mobile and desktop experience
+
+### 📦 Code Quality
+- **Consistent Imports**: Fixed all import paths to use relative imports
+- **Component Organization**: Better separation of concerns in component structure
+- **Documentation**: Enhanced JSDoc comments and inline documentation
+- **Constants**: Moved hardcoded values to centralized constants file
+
 ## 🛠️ Tech Stack
 
 - **Framework**: [Next.js 14](https://nextjs.org) with App Router
@@ -165,18 +193,37 @@ inec_poll/
 ├── app/                    # Next.js App Router pages
 │   ├── auth/              # Authentication pages
 │   ├── polls/             # Poll management pages
-│   └── globals.css        # Global styles
+│   ├── globals.css        # Global styles
+│   └── layout.tsx         # Root layout
 ├── components/            # Reusable UI components
-│   ├── CreatePollForm.tsx
-│   ├── PollVotingComponent.tsx
-│   └── ProtectedPollsPage.tsx
-├── lib/                   # Utility functions and actions
+│   ├── forms/             # Form components
+│   │   ├── CreatePollForm.tsx
+│   │   └── EditPollForm.tsx
+│   ├── polls/             # Poll-specific components
+│   │   ├── PollCard.tsx
+│   │   ├── PollVotingComponent.tsx
+│   │   └── ProtectedPollsPage.tsx
+│   └── ui/                # Base UI components
+│       ├── button.tsx
+│       ├── card.tsx
+│       ├── qr-code.tsx    # QR code sharing
+│       ├── loading.tsx    # Loading states
+│       └── error-boundary.tsx
+├── lib/                   # Utility functions and configuration
 │   ├── actions/           # Server actions
-│   └── supabaseClient.ts  # Supabase configuration
-├── src/                   # Additional source files
+│   │   └── polls.ts
 │   ├── context/           # React contexts
-│   ├── hooks/             # Custom hooks
-│   └── types/             # TypeScript type definitions
+│   │   └── AuthContext.tsx
+│   ├── types/             # TypeScript type definitions
+│   │   └── poll.ts
+│   ├── constants/         # Application constants
+│   │   └── index.ts
+│   ├── middleware/        # Security middleware
+│   │   └── security.ts
+│   ├── validations/       # Zod validation schemas
+│   │   └── poll.ts
+│   ├── supabaseClient.ts  # Supabase configuration
+│   └── utils.ts           # Utility functions
 └── supabase-schema.sql    # Database schema
 ```
 

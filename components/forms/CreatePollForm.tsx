@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { createPoll, CreatePollData } from '../../lib/actions/polls'
-import { ElectionType } from '../../src/types/poll'
+import { ElectionType } from '../../lib/types/poll'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '../../src/context/AuthContext'
+import { useAuth } from '../../lib/context/AuthContext'
+import { ELECTION_TYPES, NIGERIAN_STATES, POLL_CONFIG } from '../../lib/constants'
 
 /**
  * Interface for individual poll option data
@@ -62,23 +63,10 @@ export default function CreatePollForm() {
     })
 
     // Available election types for the dropdown
-    const electionTypes: ElectionType[] = [
-        'Presidential',
-        'Gubernatorial',
-        'Senatorial',
-        'House of Reps',
-        'State Assembly'
-    ]
+    const electionTypes: ElectionType[] = ELECTION_TYPES
 
     // Complete list of Nigerian states for state-specific elections
-    const nigerianStates = [
-        'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa',
-        'Benue', 'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo',
-        'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo', 'Jigawa',
-        'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara',
-        'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun',
-        'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara'
-    ]
+    const nigerianStates = NIGERIAN_STATES
 
     /**
      * Handles changes to main poll form fields
@@ -168,8 +156,8 @@ export default function CreatePollForm() {
 
         // Filter out empty options and validate minimum count
         const validOptions = formData.options.filter(option => option.candidate_name.trim())
-        if (validOptions.length < 2) {
-            setError('At least 2 candidates are required')
+        if (validOptions.length < POLL_CONFIG.MIN_CANDIDATES) {
+            setError(`At least ${POLL_CONFIG.MIN_CANDIDATES} candidates are required`)
             setIsSubmitting(false)
             return
         }

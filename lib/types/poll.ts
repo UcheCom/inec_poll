@@ -1,4 +1,4 @@
-// src/types/poll.ts
+// lib/types/poll.ts
 
 export type ElectionType = 'Presidential' | 'Gubernatorial' | 'Senatorial' | 'House of Reps' | 'State Assembly';
 
@@ -72,4 +72,9 @@ export interface PollWithOptions extends Poll {
     options: PollOption[];
     statistics?: PollStatistics;
     option_vote_counts?: OptionVoteCount[];
+    profiles?: {
+        id: string;
+        email: string;
+        full_name?: string;
+    };
 }

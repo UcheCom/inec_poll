@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { SECURITY_HEADERS, RATE_LIMITS, DB_CONFIG } from '../constants'
 
 /**
  * Security Headers Configuration
  * 
  * Defines security headers to be applied to all responses
  */
-export const securityHeaders = {
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co;"
-}
+export const securityHeaders = SECURITY_HEADERS
 
 /**
  * Rate Limiting Store
@@ -27,18 +20,7 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
  * Maximum number of entries to keep in memory
  * Prevents memory leaks in long-running processes
  */
-const MAX_STORE_SIZE = 10000
-
-/**
- * Rate Limiting Configuration
- */
-const RATE_LIMITS = {
-    create_poll: { requests: 5, window: 60 * 1000 }, // 5 requests per minute
-    vote: { requests: 10, window: 60 * 1000 }, // 10 votes per minute
-    update_poll: { requests: 10, window: 60 * 1000 }, // 10 updates per minute
-    delete_poll: { requests: 3, window: 60 * 1000 }, // 3 deletes per minute
-    general: { requests: 100, window: 60 * 1000 } // 100 general requests per minute
-}
+const MAX_STORE_SIZE = DB_CONFIG.MAX_STORE_SIZE
 
 /**
  * Applies security headers to response
@@ -112,7 +94,7 @@ export function getClientIP(request: NextRequest): string {
  */
 export function rateLimitMiddleware(
     request: NextRequest,
-    action: keyof typeof RATE_LIMITS,
+    action: 'create_poll' | 'vote' | 'update_poll' | 'delete_poll' | 'general',
     userId?: string
 ): NextResponse | null {
     const ip = getClientIP(request)
@@ -206,7 +188,7 @@ export function validateCSRFToken(request: NextRequest): boolean {
  */
 export function securityMiddleware(
     request: NextRequest,
-    action: keyof typeof RATE_LIMITS,
+    action: 'create_poll' | 'vote' | 'update_poll' | 'delete_poll' | 'general',
     userId?: string
 ): NextResponse | null {
     // Apply rate limiting

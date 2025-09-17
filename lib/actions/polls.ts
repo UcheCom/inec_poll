@@ -3,7 +3,7 @@
 import { createServerClient } from '../supabaseClient'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { Poll, PollOption, ElectionType } from '../../src/types/poll'
+import { Poll, PollOption, ElectionType } from '../types/poll'
 
 /**
  * CreatePollData Interface
